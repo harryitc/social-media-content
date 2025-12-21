@@ -3,7 +3,7 @@
 </h1>
 
 
-### Cách chạy
+### Setup Development Environment with Dev Containers
 
 1. Chỉnh sửa lại file `devcontainer.json`.
 ```json
