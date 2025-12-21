@@ -1,4 +1,7 @@
-<img src="/demo/post.png" alt="Social Media Management" width="200"/>
+<h1 align="center">
+ <img src="/demo/post.png" alt="Social Media Management"/>
+</h1>
+
 
 ### Cách chạy
 
