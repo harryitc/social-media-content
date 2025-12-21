@@ -1,0 +1,20 @@
+{
+  "name": "social-media-management (Common Image, Nextjs)",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
+
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+  // "mounts": [
+  //   "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind"
+  // ],
+
+  "remoteUser": "root",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bradlc.vscode-tailwindcss"
+      ]
+    }
+  }
+}
