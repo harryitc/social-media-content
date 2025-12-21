@@ -1,3 +1,5 @@
+<img src="/demo/post.png" alt="Social Media Management" width="200"/>
+
 ### Cách chạy
 
 1. Chỉnh sửa lại file `devcontainer.json`.
@@ -45,3 +47,5 @@ npm install
 ```bash
 npm run dev
 ```
+
+5. Mở trình duyệt và truy cập vào địa chỉ: http://localhost:3000
