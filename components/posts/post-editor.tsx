@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Upload, X, Smile, GripVertical, Wand2, Sparkles, ImagePlus, NotebookPen, RefreshCw } from "lucide-react"
+import { Upload, X, Smile, GripVertical, Wand2, Sparkles, ImagePlus, NotebookPen, RefreshCw, Lightbulb } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -95,6 +95,8 @@ export function PostEditor({
   const [isContentAiOpen, setIsContentAiOpen] = useState(false)
   const [contentAiMode, setContentAiMode] = useState<"content" | "all">("all")
   const [isImageGenerating, setIsImageGenerating] = useState(false)
+  const [isIdeaHashtagOpen, setIsIdeaHashtagOpen] = useState(false)
+  const [hashtagIdea, setHashtagIdea] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imagesRef = useRef(images)
   const { toast } = useToast()
@@ -165,6 +167,37 @@ export function PostEditor({
       title: inserted ? "Đã thêm hashtag" : "Không có hashtag mới",
       description: inserted ? "Nội dung đã được chèn hashtag tự động." : "Các hashtag gợi ý đã tồn tại trong nội dung.",
     })
+  }
+
+  const runHashtagFromIdea = () => {
+    if (!hashtagIdea.trim()) {
+      toast({
+        title: "Chưa có ý tưởng",
+        description: "Nhập ý tưởng hoặc chủ đề trước khi sinh hashtag.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const generated = extractHashtags(hashtagIdea)
+    if (!generated.length) {
+      toast({
+        title: "Không tạo được hashtag",
+        description: "Ý tưởng quá ngắn, vui lòng mô tả chi tiết hơn.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const inserted = appendHashtagsToContent(generated)
+    toast({
+      title: inserted ? "Đã thêm hashtag" : "Không có hashtag mới",
+      description: inserted
+        ? "Hashtag từ ý tưởng đã được chèn vào nội dung."
+        : "Các hashtag từ ý tưởng đã tồn tại trong nội dung.",
+    })
+    setHashtagIdea("")
+    setIsIdeaHashtagOpen(false)
   }
 
   const handleOpenContentAi = (mode: "content" | "all") => {
@@ -300,6 +333,13 @@ export function PostEditor({
                       <p className="text-muted-foreground text-xs">Phân tích đoạn text hiện tại để sinh hashtag.</p>
                     </div>
                   </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setIsIdeaHashtagOpen(true)}>
+                    <Lightbulb className="mr-2 h-4 w-4" />
+                    <div>
+                      <p className="text-sm font-medium">Từ ý tưởng</p>
+                      <p className="text-muted-foreground text-xs">Nhập ý tưởng nhanh và nhận hashtag phù hợp.</p>
+                    </div>
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel>Template chủ đề</DropdownMenuLabel>
                   {hashtagTemplates.map((template) => (
@@ -431,6 +471,29 @@ export function PostEditor({
             }}
             onImagesGenerated={(newImages) => onImagesChange([...images, ...newImages])}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isIdeaHashtagOpen} onOpenChange={setIsIdeaHashtagOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sinh hashtag từ ý tưởng</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Ý tưởng</Label>
+              <Textarea
+                placeholder="Nhập ý tưởng, chủ đề hoặc mô tả chiến dịch..."
+                value={hashtagIdea}
+                onChange={(e) => setHashtagIdea(e.target.value)}
+                className="min-h-[120px]"
+              />
+            </div>
+            <Button className="w-full" onClick={runHashtagFromIdea}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Sinh hashtag
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
