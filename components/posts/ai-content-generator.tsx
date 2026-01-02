@@ -83,7 +83,7 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label>Chủ đề</Label>
           <Select value={topic} onValueChange={setTopic}>
             <SelectTrigger>
@@ -97,9 +97,9 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </div> */}
 
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label>Giọng văn</Label>
           <Select value={tone} onValueChange={setTone}>
             <SelectTrigger>
@@ -113,7 +113,7 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </div> */}
       </div>
 
       <Button onClick={generateContent} disabled={isLoading} className="w-full">
