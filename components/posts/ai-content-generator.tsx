@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Sparkles, RefreshCw, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,9 +27,11 @@ const tones = [
 interface AIContentGeneratorProps {
   onContentGenerated: (content: string) => void
   onImagesGenerated?: (images: string[]) => void
+  mode?: "content" | "all"
 }
 
-export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AIContentGeneratorProps) {
+export function AIContentGenerator({ onContentGenerated, onImagesGenerated, mode = "all" }: AIContentGeneratorProps) {
+  const isContentOnly = mode === "content"
   const [idea, setIdea] = useState("")
   const [topic, setTopic] = useState("")
   const [tone, setTone] = useState("")
@@ -38,6 +40,13 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
   const [selectedImages, setSelectedImages] = useState<Set<number>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (isContentOnly) {
+      setGeneratedImages([])
+      setSelectedImages(new Set())
+    }
+  }, [isContentOnly])
 
   const generateContent = async () => {
     if (!idea.trim()) {
@@ -67,7 +76,7 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
       const mockImages = ["/modern-office.jpg", "/teamwork.png", "/abstract-innovation.png", "/path-to-success.png"]
 
       setGeneratedContent(mockContent)
-      setGeneratedImages(mockImages)
+      setGeneratedImages(isContentOnly ? [] : mockImages)
       setSelectedImages(new Set())
       setIsLoading(false)
       toast({
@@ -78,6 +87,7 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
   }
 
   const toggleImageSelection = (index: number) => {
+    if (isContentOnly) return
     const updated = new Set(selectedImages)
     if (updated.has(index)) {
       updated.delete(index)
@@ -89,22 +99,29 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
 
   const applyGeneratedResult = () => {
     if (!generatedContent) return
-    const selected = generatedImages.filter((_, index) => selectedImages.has(index))
+    const selected = isContentOnly ? [] : generatedImages.filter((_, index) => selectedImages.has(index))
     onContentGenerated(generatedContent)
     if (selected.length) {
       onImagesGenerated?.(selected)
     }
     setSelectedImages(new Set())
     toast({
-      title: selected.length ? "Đã áp dụng nội dung & hình ảnh" : "Đã áp dụng nội dung",
-      description: selected.length
-        ? `Nội dung và ${selected.length} ảnh AI đã được thêm vào editor.`
-        : "Nội dung AI đã được thêm vào editor.",
+      title:
+        selected.length && !isContentOnly ? "Đã áp dụng nội dung & hình ảnh" : "Đã áp dụng nội dung",
+      description:
+        selected.length && !isContentOnly
+          ? `Nội dung và ${selected.length} ảnh AI đã được thêm vào editor.`
+          : "Nội dung AI đã được thêm vào editor.",
     })
   }
 
   return (
     <div className="space-y-4">
+      {/* <p className="text-xs text-muted-foreground">
+        {isContentOnly
+          ? "Chế độ Chỉ nội dung: AI sinh caption dựa trên ý tưởng, không tạo thêm hình ảnh."
+          : "Chế độ Tất cả: AI sinh caption và kèm theo danh sách hình ảnh gợi ý để lựa chọn."}
+      </p> */}
       <div className="space-y-2">
         <Label>Ý tưởng bài viết</Label>
         <Input placeholder="Nhập ý tưởng..." value={idea} onChange={(e) => setIdea(e.target.value)} />
@@ -166,12 +183,12 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
             onChange={(e) => setGeneratedContent(e.target.value)}
             className="min-h-[150px]"
           />
-          {generatedImages.length > 0 && (
+          {!isContentOnly && generatedImages.length > 0 && (
             <div className="space-y-3">
               <div className="space-y-1">
-                <Label>Hình ảnh gợi ý</Label>
+                <Label>Hình ảnh gợi ý từ AI</Label>
                 <p className="text-xs text-muted-foreground">
-                  Chọn ảnh bạn muốn thêm. Chúng sẽ được áp dụng cùng lúc với nút "Dùng nội dung này".
+                  Chọn các ảnh phù hợp; chúng được chèn cùng lúc với nút "Dùng nội dung này".
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-3">

@@ -93,6 +93,7 @@ export function PostEditor({
 }: PostEditorProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [isContentAiOpen, setIsContentAiOpen] = useState(false)
+  const [contentAiMode, setContentAiMode] = useState<"content" | "all">("all")
   const [isImageGenerating, setIsImageGenerating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imagesRef = useRef(images)
@@ -166,6 +167,11 @@ export function PostEditor({
     })
   }
 
+  const handleOpenContentAi = (mode: "content" | "all") => {
+    setContentAiMode(mode)
+    setIsContentAiOpen(true)
+  }
+
   const handleAiImageGeneration = () => {
     if (isImageGenerating) return
     setIsImageGenerating(true)
@@ -230,10 +236,29 @@ export function PostEditor({
                   <Smile className="mr-1 h-4 w-4" />
                   Emoji
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1" onClick={() => setIsContentAiOpen(true)}>
-                  <Sparkles className="h-4 w-4" />
-                  AI nội dung
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1">
+                      <Sparkles className="h-4 w-4" />
+                      Nội dung
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-72">
+                    {/* <DropdownMenuLabel>Chọn phạm vi</DropdownMenuLabel> */}
+                    <DropdownMenuItem onSelect={() => handleOpenContentAi("content")}>
+                      <div>
+                        <p className="text-sm font-medium">Đơn giản</p>
+                        <p className="text-xs text-muted-foreground">Sinh nội dung dựa trên ý tưởng</p>
+                      </div>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleOpenContentAi("all")}>
+                      <div>
+                        <p className="text-sm font-medium">Đặc biệt</p>
+                        <p className="text-xs text-muted-foreground">Sinh nội dung dựa trên ý tưởng, kèm hình ảnh</p>
+                      </div>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
             <Textarea
@@ -396,9 +421,10 @@ export function PostEditor({
       <Dialog open={isContentAiOpen} onOpenChange={setIsContentAiOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>AI nội dung</DialogTitle>
+            <DialogTitle>AI Nội dung</DialogTitle>
           </DialogHeader>
           <AIContentGenerator
+            mode={contentAiMode}
             onContentGenerated={(generated) => {
               onContentChange(generated)
               setIsContentAiOpen(false)
