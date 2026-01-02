@@ -1,7 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
-import { Upload, X, Smile, Hash, GripVertical, Wand2, Sparkles, ImagePlus, NotebookPen } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { Upload, X, Smile, GripVertical, Wand2, Sparkles, ImagePlus, NotebookPen, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { AIContentGenerator } from "@/components/posts/ai-content-generator"
-import { AIImageGenerator } from "@/components/posts/ai-image-generator"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   DropdownMenu,
@@ -94,9 +93,14 @@ export function PostEditor({
 }: PostEditorProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [isContentAiOpen, setIsContentAiOpen] = useState(false)
-  const [isImageAiOpen, setIsImageAiOpen] = useState(false)
+  const [isImageGenerating, setIsImageGenerating] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imagesRef = useRef(images)
   const { toast } = useToast()
+
+  useEffect(() => {
+    imagesRef.current = images
+  }, [images])
 
   const appendHashtagsToContent = (tags: string[]) => {
     const merged = mergeHashtagsIntoContent(content, tags)
@@ -160,6 +164,21 @@ export function PostEditor({
       title: inserted ? "Đã thêm hashtag" : "Không có hashtag mới",
       description: inserted ? "Nội dung đã được chèn hashtag tự động." : "Các hashtag gợi ý đã tồn tại trong nội dung.",
     })
+  }
+
+  const handleAiImageGeneration = () => {
+    if (isImageGenerating) return
+    setIsImageGenerating(true)
+
+    setTimeout(() => {
+      const mockImages = ["/modern-office.jpg", "/teamwork.png", "/abstract-innovation.png", "/path-to-success.png"]
+      onImagesChange([...imagesRef.current, ...mockImages])
+      setIsImageGenerating(false)
+      toast({
+        title: "AI đã tạo hình ảnh",
+        description: "4 hình ảnh gợi ý đã được thêm vào thư viện bài đăng.",
+      })
+    }, 2000)
   }
 
   return (
@@ -282,9 +301,24 @@ export function PostEditor({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label className="font-medium">Hình ảnh</Label>
-              <Button variant="outline" size="sm" className="gap-1" onClick={() => setIsImageAiOpen(true)}>
-                <ImagePlus className="h-4 w-4" />
-                AI hình ảnh
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1"
+                onClick={handleAiImageGeneration}
+                disabled={isImageGenerating}
+              >
+                {isImageGenerating ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    Đang sinh ảnh...
+                  </>
+                ) : (
+                  <>
+                    <ImagePlus className="h-4 w-4" />
+                    AI hình ảnh
+                  </>
+                )}
               </Button>
             </div>
             <div
@@ -371,15 +405,6 @@ export function PostEditor({
             }}
             onImagesGenerated={(newImages) => onImagesChange([...images, ...newImages])}
           />
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isImageAiOpen} onOpenChange={setIsImageAiOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>AI hình ảnh</DialogTitle>
-          </DialogHeader>
-          <AIImageGenerator onImagesGenerated={(newImages) => onImagesChange([...images, ...newImages])} currentImages={images} />
         </DialogContent>
       </Dialog>
     </div>
