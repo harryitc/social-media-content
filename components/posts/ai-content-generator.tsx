@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Sparkles, RefreshCw } from "lucide-react"
+import { Sparkles, RefreshCw, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,6 +35,7 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
   const [tone, setTone] = useState("")
   const [generatedContent, setGeneratedContent] = useState("")
   const [generatedImages, setGeneratedImages] = useState<string[]>([])
+  const [selectedImages, setSelectedImages] = useState<Set<number>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
 
@@ -67,12 +68,39 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
 
       setGeneratedContent(mockContent)
       setGeneratedImages(mockImages)
+      setSelectedImages(new Set())
       setIsLoading(false)
       toast({
         title: "Tạo nội dung thành công!",
         description: "AI đã tạo nội dung dựa trên ý tưởng của bạn.",
       })
     }, 2000)
+  }
+
+  const toggleImageSelection = (index: number) => {
+    const updated = new Set(selectedImages)
+    if (updated.has(index)) {
+      updated.delete(index)
+    } else {
+      updated.add(index)
+    }
+    setSelectedImages(updated)
+  }
+
+  const applyGeneratedResult = () => {
+    if (!generatedContent) return
+    const selected = generatedImages.filter((_, index) => selectedImages.has(index))
+    onContentGenerated(generatedContent)
+    if (selected.length) {
+      onImagesGenerated?.(selected)
+    }
+    setSelectedImages(new Set())
+    toast({
+      title: selected.length ? "Đã áp dụng nội dung & hình ảnh" : "Đã áp dụng nội dung",
+      description: selected.length
+        ? `Nội dung và ${selected.length} ảnh AI đã được thêm vào editor.`
+        : "Nội dung AI đã được thêm vào editor.",
+    })
   }
 
   return (
@@ -138,51 +166,44 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated }: AI
             onChange={(e) => setGeneratedContent(e.target.value)}
             className="min-h-[150px]"
           />
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() => {
-                onContentGenerated(generatedContent)
-                toast({
-                  title: "Đã áp dụng nội dung",
-                  description: "Nội dung AI đã được thêm vào editor.",
-                })
-              }}
-            >
-              Dùng nội dung này
-            </Button>
-            <Button size="sm" variant="outline" onClick={generateContent}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Tạo lại
-            </Button>
-          </div>
           {generatedImages.length > 0 && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="space-y-1">
                 <Label>Hình ảnh gợi ý</Label>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => {
-                    onImagesGenerated?.(generatedImages)
-                    toast({
-                      title: "Đã thêm hình ảnh",
-                      description: `${generatedImages.length} ảnh AI được đưa vào bài viết.`,
-                    })
-                  }}
-                >
-                  Thêm tất cả ảnh
-                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Chọn ảnh bạn muốn thêm. Chúng sẽ được áp dụng cùng lúc với nút "Dùng nội dung này".
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {generatedImages.map((image, index) => (
-                  <div key={image + index} className="overflow-hidden rounded-lg border">
-                    <img src={image || "/placeholder.svg"} alt={`AI image ${index + 1}`} className="h-32 w-full object-cover" />
+                  <div
+                    key={image + index}
+                    onClick={() => toggleImageSelection(index)}
+                    className="group relative aspect-square cursor-pointer overflow-hidden rounded-xl border-2 border-border transition-all hover:border-primary"
+                  >
+                    <img
+                      src={image || "/placeholder.svg"}
+                      alt={`AI image ${index + 1}`}
+                      className="h-full w-full object-cover"
+                    />
+                    {selectedImages.has(index) && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-primary/80">
+                        <Check className="h-8 w-8 text-primary-foreground" />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+
             </div>
           )}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Button variant="outline" onClick={generateContent}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Tạo lại
+            </Button>
+            <Button onClick={applyGeneratedResult}>Dùng nội dung này</Button>
+          </div>
         </div>
       )}
     </div>
