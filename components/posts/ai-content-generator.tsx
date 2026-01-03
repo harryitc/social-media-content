@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { generateOnlyContent, generatePost } from "@/lib/ai-service"
 
 const topics = [
   { value: "marketing", label: "Marketing" },
@@ -59,31 +60,43 @@ export function AIContentGenerator({ onContentGenerated, onImagesGenerated, mode
     }
 
     setIsLoading(true)
+    try {
+      const trimmedIdea = idea.trim()
 
-    // Simulate API call
-    setTimeout(() => {
-      const mockContent = `🎓 ${idea}
+      if (isContentOnly) {
+        // Chế độ Đơn giản: chỉ sinh nội dung
+        const contentResult = await generateOnlyContent(trimmedIdea)
+        setGeneratedContent(contentResult)
+        setGeneratedImages([])
+        setSelectedImages(new Set())
+      } else {
+        // Chế độ Đặc biệt: sinh tất cả (content + images + hashtags)
+        const postResult = await generatePost(trimmedIdea)
+        
+        // Ghép content với hashtags
+        const fullContent = postResult.hashtags.length
+          ? `${postResult.content}\n\n${postResult.hashtags.join(" ")}`
+          : postResult.content
+        
+        setGeneratedContent(fullContent)
+        setGeneratedImages(postResult.images)
+        setSelectedImages(new Set())
+      }
 
-Đây là nội dung mẫu được tạo bởi AI dựa trên ý tưởng của bạn. Trong thực tế, nội dung này sẽ được tạo thông qua workflow n8n kết nối với các AI models.
-
-✨ Nội dung đã được tối ưu hóa cho Facebook với:
-- Emoji phù hợp
-- Hashtag thịnh hành
-- Call-to-action rõ ràng
-
-#HUTECH #${topic || "SuKien"} #TinTuc`
-
-      const mockImages = ["/modern-office.jpg", "/teamwork.png", "/abstract-innovation.png", "/path-to-success.png"]
-
-      setGeneratedContent(mockContent)
-      setGeneratedImages(isContentOnly ? [] : mockImages)
-      setSelectedImages(new Set())
-      setIsLoading(false)
       toast({
         title: "Tạo nội dung thành công!",
         description: "AI đã tạo nội dung dựa trên ý tưởng của bạn.",
       })
-    }, 2000)
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Không thể tạo nội dung",
+        description: "Vui lòng thử lại hoặc kiểm tra kết nối.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const toggleImageSelection = (index: number) => {

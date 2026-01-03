@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
+import { generateHashtagsFromIdea, generateImagesFromContent } from "@/lib/ai-service"
 
 interface PostEditorProps {
   content: string
@@ -97,6 +98,7 @@ export function PostEditor({
   const [isImageGenerating, setIsImageGenerating] = useState(false)
   const [isIdeaHashtagOpen, setIsIdeaHashtagOpen] = useState(false)
   const [hashtagIdea, setHashtagIdea] = useState("")
+  const [isIdeaHashtagLoading, setIsIdeaHashtagLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imagesRef = useRef(images)
   const { toast } = useToast()
@@ -169,7 +171,7 @@ export function PostEditor({
     })
   }
 
-  const runHashtagFromIdea = () => {
+  const runHashtagFromIdea = async () => {
     if (!hashtagIdea.trim()) {
       toast({
         title: "Chưa có ý tưởng",
@@ -179,25 +181,37 @@ export function PostEditor({
       return
     }
 
-    const generated = extractHashtags(hashtagIdea)
-    if (!generated.length) {
+    setIsIdeaHashtagLoading(true)
+    try {
+      const tags = await generateHashtagsFromIdea("facebook", hashtagIdea.trim())
+      if (!tags.length) {
+        toast({
+          title: "Không tạo được hashtag",
+          description: "API không trả về hashtag phù hợp. Vui lòng thử lại.",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const inserted = appendHashtagsToContent(tags)
       toast({
-        title: "Không tạo được hashtag",
-        description: "Ý tưởng quá ngắn, vui lòng mô tả chi tiết hơn.",
+        title: inserted ? "Đã thêm hashtag" : "Không có hashtag mới",
+        description: inserted
+          ? "Hashtag từ ý tưởng đã được chèn vào nội dung."
+          : "Các hashtag từ ý tưởng đã tồn tại trong nội dung.",
+      })
+      setHashtagIdea("")
+      setIsIdeaHashtagOpen(false)
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Không thể gọi API",
+        description: "Vui lòng thử lại sau ít phút.",
         variant: "destructive",
       })
-      return
+    } finally {
+      setIsIdeaHashtagLoading(false)
     }
-
-    const inserted = appendHashtagsToContent(generated)
-    toast({
-      title: inserted ? "Đã thêm hashtag" : "Không có hashtag mới",
-      description: inserted
-        ? "Hashtag từ ý tưởng đã được chèn vào nội dung."
-        : "Các hashtag từ ý tưởng đã tồn tại trong nội dung.",
-    })
-    setHashtagIdea("")
-    setIsIdeaHashtagOpen(false)
   }
 
   const handleOpenContentAi = (mode: "content" | "all") => {
@@ -205,19 +219,36 @@ export function PostEditor({
     setIsContentAiOpen(true)
   }
 
-  const handleAiImageGeneration = () => {
+  const handleAiImageGeneration = async () => {
     if (isImageGenerating) return
+    const prompt = content.trim() || "Gợi ý hình ảnh mạng xã hội"
     setIsImageGenerating(true)
 
-    setTimeout(() => {
-      const mockImages = ["/modern-office.jpg", "/teamwork.png", "/abstract-innovation.png", "/path-to-success.png"]
-      onImagesChange([...imagesRef.current, ...mockImages])
-      setIsImageGenerating(false)
+    try {
+      const generated = await generateImagesFromContent(prompt)
+      if (!generated.length) {
+        toast({
+          title: "Không có hình ảnh mới",
+          description: "API không trả về hình ảnh, vui lòng thử lại.",
+          variant: "destructive",
+        })
+        return
+      }
+      onImagesChange([...imagesRef.current, ...generated])
       toast({
         title: "AI đã tạo hình ảnh",
-        description: "4 hình ảnh gợi ý đã được thêm vào thư viện bài đăng.",
+        description: `${generated.length} hình ảnh đã được thêm vào bài đăng.`,
       })
-    }, 2000)
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Không thể tạo hình ảnh",
+        description: "Vui lòng thử lại sau ít phút.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsImageGenerating(false)
+    }
   }
 
   return (
@@ -489,9 +520,18 @@ export function PostEditor({
                 className="min-h-[120px]"
               />
             </div>
-            <Button className="w-full" onClick={runHashtagFromIdea}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Sinh hashtag
+            <Button className="w-full" onClick={runHashtagFromIdea} disabled={isIdeaHashtagLoading}>
+              {isIdeaHashtagLoading ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Sinh hashtag
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

@@ -1,18 +1,20 @@
 "use client"
 
 import { useState } from "react"
-import { Save, Send, Clock } from "lucide-react"
+import { Save, Send, Clock, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PostEditor } from "@/components/posts/post-editor"
 import { PostPreview } from "@/components/posts/post-preview"
 import { useToast } from "@/hooks/use-toast"
+import { submitPostNow } from "@/lib/ai-service"
 
 export function CreatePostContent() {
   const [postContent, setPostContent] = useState("")
   const [images, setImages] = useState<string[]>([])
   const [scheduledTime, setScheduledTime] = useState("")
   const [mobileTab, setMobileTab] = useState<"editor" | "preview">("editor")
+  const [isPublishing, setIsPublishing] = useState(false)
   const { toast } = useToast()
 
   const hasContent = postContent.trim().length > 0
@@ -36,7 +38,7 @@ export function CreatePostContent() {
     toast({ title: "Đã lên lịch", description: "Bài viết sẽ đăng theo thời gian đã chọn." })
   }
 
-  const handlePublishNow = () => {
+  const handlePublishNow = async () => {
     if (!hasContent) {
       toast({
         title: "Thiếu nội dung",
@@ -45,7 +47,20 @@ export function CreatePostContent() {
       })
       return
     }
-    toast({ title: "Sẵn sàng đăng", description: "Bài viết sẽ được đăng ngay sau khi xác nhận." })
+    setIsPublishing(true)
+    try {
+      await submitPostNow({ content: postContent.trim(), files: images })
+      toast({ title: "Đã gửi yêu cầu đăng", description: "Bài viết đang được xử lý để đăng ngay." })
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Đăng thất bại",
+        description: "Không thể gửi yêu cầu đăng ngay. Vui lòng thử lại.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   return (
@@ -67,9 +82,18 @@ export function CreatePostContent() {
             <Clock className="mr-2 h-4 w-4" />
             Lên lịch đăng
           </Button>
-          <Button onClick={handlePublishNow}>
-            <Send className="mr-2 h-4 w-4" />
-            Đăng ngay
+          <Button onClick={handlePublishNow} disabled={isPublishing}>
+            {isPublishing ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Đang đăng...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Đăng ngay
+              </>
+            )}
           </Button>
         </div>
       </div>
