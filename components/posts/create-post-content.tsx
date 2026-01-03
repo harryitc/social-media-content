@@ -7,21 +7,52 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PostEditor } from "@/components/posts/post-editor"
 import { PostPreview } from "@/components/posts/post-preview"
 import { useToast } from "@/hooks/use-toast"
-import { submitPostNow } from "@/lib/ai-service"
+import { submitDraft, submitPostNow } from "@/lib/ai-service"
 
 export function CreatePostContent() {
   const [postContent, setPostContent] = useState("")
   const [images, setImages] = useState<string[]>([])
   const [scheduledTime, setScheduledTime] = useState("")
   const [mobileTab, setMobileTab] = useState<"editor" | "preview">("editor")
+  const [platform, setPlatform] = useState("facebook")
+  const [postingPage, setPostingPage] = useState("page1")
   const [isPublishing, setIsPublishing] = useState(false)
+  const [isSavingDraft, setIsSavingDraft] = useState(false)
   const { toast } = useToast()
 
   const hasContent = postContent.trim().length > 0
   const hasSchedule = Boolean(scheduledTime)
 
-  const handleSaveDraft = () => {
-    toast({ title: "Đã lưu nháp", description: "Bản nháp đã được lưu tạm thời." })
+  const handleSaveDraft = async () => {
+    if (!hasContent) {
+      toast({
+        title: "Thiếu nội dung",
+        description: "Vui lòng nhập nội dung trước khi lưu nháp.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingDraft(true)
+    try {
+      await submitDraft({
+        content: postContent.trim(),
+        files: images,
+        platform,
+        page: postingPage,
+        scheduledTime,
+      })
+      toast({ title: "Đã lưu nháp", description: "Bài viết đã được lưu lại dưới dạng nháp." })
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: "Lưu nháp thất bại",
+        description: "Không thể lưu nháp lúc này. Vui lòng thử lại.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingDraft(false)
+    }
   }
 
   const handleSchedulePost = () => {
@@ -74,9 +105,18 @@ export function CreatePostContent() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={handleSaveDraft}>
-            <Save className="mr-2 h-4 w-4" />
-            Lưu nháp
+          <Button variant="outline" onClick={handleSaveDraft} disabled={isSavingDraft}>
+            {isSavingDraft ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Đang lưu...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Lưu nháp
+              </>
+            )}
           </Button>
           <Button variant="outline" onClick={handleSchedulePost}>
             <Clock className="mr-2 h-4 w-4" />
@@ -119,6 +159,10 @@ export function CreatePostContent() {
               onImagesChange={setImages}
               scheduledTime={scheduledTime}
               onScheduledTimeChange={setScheduledTime}
+              platform={platform}
+              onPlatformChange={setPlatform}
+              postingPage={postingPage}
+              onPostingPageChange={setPostingPage}
             />
           </TabsContent>
           <TabsContent value="preview" className="mt-6">
@@ -141,6 +185,10 @@ export function CreatePostContent() {
             onImagesChange={setImages}
             scheduledTime={scheduledTime}
             onScheduledTimeChange={setScheduledTime}
+              platform={platform}
+              onPlatformChange={setPlatform}
+              postingPage={postingPage}
+              onPostingPageChange={setPostingPage}
           />
         </div>
         <div className="lg:col-span-5">

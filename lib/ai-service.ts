@@ -1,6 +1,6 @@
 import axios, { AxiosError } from "axios"
 
-const BASE_URL = "http://192.168.137.1:5678/webhook-test"
+const BASE_URL = "http://192.168.137.1:5678/webhook"
 
 type ContentApiResponse = Array<{
   content?: string
@@ -215,7 +215,18 @@ export async function generatePost(idea: string): Promise<GeneratedPost> {
   }
 }
 
-export async function submitPostNow(payload: { content: string; files?: UploadSource[] }) {
+type SubmitPayload = {
+  content: string
+  files?: UploadSource[]
+}
+
+type SubmitDraftPayload = SubmitPayload & {
+  platform: string
+  page: string
+  scheduledTime?: string
+}
+
+export async function submitPostNow(payload: SubmitPayload) {
   const trimmedContent = payload.content?.trim()
   if (!trimmedContent) {
     throw new Error("Nội dung không hợp lệ")
@@ -231,6 +242,41 @@ export async function submitPostNow(payload: { content: string; files?: UploadSo
   })
 
   await apiClient.post("/action-submit-now", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  })
+}
+
+export async function submitDraft(payload: SubmitDraftPayload) {
+  const trimmedContent = payload.content?.trim()
+  if (!trimmedContent) {
+    throw new Error("Nội dung không hợp lệ")
+  }
+
+  if (!payload.platform) {
+    throw new Error("Thiếu thông tin nền tảng")
+  }
+
+  if (!payload.page) {
+    throw new Error("Thiếu thông tin trang đăng")
+  }
+
+  const normalizedFiles = await normalizeUploadFiles(payload.files ?? [])
+  const formData = new FormData()
+  formData.append("content", trimmedContent)
+  formData.append("platform", payload.platform)
+  formData.append("page", payload.page)
+  if (payload.scheduledTime) {
+    formData.append("scheduledTime", payload.scheduledTime)
+  }
+
+  normalizedFiles.forEach((file, index) => {
+    const filename = file.name || buildFallbackFileName(index)
+    formData.append("files", file, filename)
+  })
+
+  await apiClient.post("/action-submit-draft", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

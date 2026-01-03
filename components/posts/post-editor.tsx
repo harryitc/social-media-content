@@ -29,6 +29,10 @@ interface PostEditorProps {
   onImagesChange: (images: string[]) => void
   scheduledTime: string
   onScheduledTimeChange: (value: string) => void
+  platform: string
+  onPlatformChange: (value: string) => void
+  postingPage: string
+  onPostingPageChange: (value: string) => void
 }
 
 type HashtagTemplate = {
@@ -91,6 +95,10 @@ export function PostEditor({
   onImagesChange,
   scheduledTime,
   onScheduledTimeChange,
+  platform,
+  onPlatformChange,
+  postingPage,
+  onPostingPageChange,
 }: PostEditorProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [isContentAiOpen, setIsContentAiOpen] = useState(false)
@@ -258,7 +266,7 @@ export function PostEditor({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label>Nền tảng</Label>
-              <Select defaultValue="facebook">
+              <Select value={platform} onValueChange={onPlatformChange}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -276,7 +284,7 @@ export function PostEditor({
             </div>
             <div className="space-y-2">
               <Label>Trang đăng</Label>
-              <Select defaultValue="page1">
+              <Select value={postingPage} onValueChange={onPostingPageChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn Fanpage..." />
                 </SelectTrigger>
