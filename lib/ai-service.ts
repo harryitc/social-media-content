@@ -1,6 +1,6 @@
 import axios, { AxiosError } from "axios"
 
-const BASE_URL = "http://192.168.137.1:5678/webhook"
+const BASE_URL = "http://192.168.137.1:5678/webhook-test"
 
 type ContentApiResponse = Array<{
   content?: string
@@ -165,6 +165,8 @@ export async function generateImagesFromContent(content: string): Promise<string
     .map((item) => item.image_urls ?? [])
     .flat()
     .map((url) => url?.trim())
+    .filter(Boolean)
+    .map((b64) => `data:image/png;base64,${b64}`)
     .filter(Boolean) as string[]
 
   if (!urls.length) {
@@ -205,6 +207,8 @@ export async function generatePost(idea: string): Promise<GeneratedPost> {
   
   const images = (data?.image_urls ?? [])
     .map((url) => url?.trim())
+    .filter(Boolean)
+    .map((b64) => `data:image/png;base64,${b64}`)
     .filter(Boolean) as string[]
 
   return {
