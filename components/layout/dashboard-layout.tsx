@@ -17,6 +17,7 @@ import {
   Sun,
   ChevronLeft,
   User,
+  Megaphone,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -38,6 +39,7 @@ const navigation = [
   { name: "Tổng quan", href: "/dashboard", icon: LayoutDashboard, disabled: true },
   { name: "Bài đăng", href: "/posts", icon: FileText },
   { name: "Tạo bài đăng", href: "/posts/create", icon: PlusCircle },
+  { name: "Quản lý đăng bài", href: "/posts/manage", icon: Megaphone },
   { name: "Lịch đăng", href: "/calendar", icon: Calendar, disabled: true },
   { name: "Thư viện nội dung", href: "/library", icon: FolderOpen, disabled: true },
   { name: "Thiết lập", href: "/settings", icon: Settings, disabled: true },
@@ -149,7 +151,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className={cn("transition-all duration-300", sidebarOpen ? "ml-64" : "ml-20")}>
         {/* Topbar */}
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-card/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-card/95 px-6 backdrop-blur supports-backdrop-filter:bg-card/60">
           <div className="flex flex-1 items-center gap-4">
             <div className="relative w-full max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
