@@ -11,27 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-
-const statusStyles: Record<string, { label: string; className: string }> = {
-  published: { label: "Đã đăng", className: "bg-emerald-100 text-emerald-700" },
-  scheduled: { label: "Lên lịch", className: "bg-indigo-100 text-indigo-700" },
-  draft: { label: "Nháp", className: "bg-slate-100 text-slate-700" },
-  error: { label: "Lỗi", className: "bg-rose-100 text-rose-700" },
-  unknown: { label: "Khác", className: "bg-muted text-foreground" },
-}
-
-type NormalizedPost = {
-  id: string
-  content: string
-  createdAt?: string
-  status: keyof typeof statusStyles
-  images: string[]
-  interactions: {
-    likes: number
-    comments: number
-    shares: number
-  }
-}
+import { PostDetailDialog } from "./post-detail-dialog"
+import { formatDateTime, statusStyles, type NormalizedPost } from "./post-utils"
 
 type DateRange = {
   since: string
@@ -60,6 +41,9 @@ export function ManagePostsContent() {
       until: today.toISOString().slice(0, 10),
     }
   })
+
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [selectedPost, setSelectedPost] = useState<NormalizedPost | null>(null)
 
   const totalInteractions = useMemo(
     () =>
@@ -387,7 +371,14 @@ export function ManagePostsContent() {
               {loading && renderSkeletonRows()}
               {!loading && hasPosts &&
                 pagedPosts.map((post, index) => (
-                  <TableRow key={post.id}>
+                  <TableRow
+                    key={post.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedPost(post)
+                      setDetailOpen(true)
+                    }}
+                  >
                     <TableCell className="font-medium">{(page - 1) * pageSize + index + 1}</TableCell>
                     <TableCell className="max-w-45 text-xs text-muted-foreground">{post.id}</TableCell>
                     <TableCell>
@@ -447,6 +438,15 @@ export function ManagePostsContent() {
           </Table>
         </div>
       </Card>
+
+      <PostDetailDialog
+        open={detailOpen}
+        onOpenChange={(open) => {
+          setDetailOpen(open)
+          if (!open) setSelectedPost(null)
+        }}
+        post={selectedPost}
+      />
     </div>
   )
 }
@@ -464,13 +464,6 @@ function resolveRange(mode: FilterMode, dateRange: DateRange, filterYear: string
   if (mode === "all") return { since: undefined, until: undefined }
   if (mode === "year") return getYearRange(filterYear)
   return dateRange
-}
-
-function formatDateTime(value?: string) {
-  if (!value) return "--"
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return date.toLocaleString("vi-VN", { hour12: false })
 }
 
 function renderSkeletonRows() {
