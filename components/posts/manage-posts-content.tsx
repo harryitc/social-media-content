@@ -12,7 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { PostDetailDialog } from "./post-detail-dialog"
+import { PageSelect } from "./page-select"
 import { formatDateTime, statusStyles, type NormalizedPost } from "./post-utils"
+import { fetchPages, fetchPostsByDateRange, fetchPostsByYear } from "@/services/facebook"
+import { getEnvConfig } from "@/lib/env"
+import type { ManagedPage, PostsApiResponse } from "@/types/facebook"
 
 type DateRange = {
   since: string
@@ -22,13 +26,20 @@ type DateRange = {
 type FilterMode = "all" | "year" | "range"
 
 export function ManagePostsContent() {
+  // State cho pages
+  const [pages, setPages] = useState<ManagedPage[]>([])
+  const [selectedPage, setSelectedPage] = useState<ManagedPage | null>(null)
+  const [loadingPages, setLoadingPages] = useState(false)
+  const [pagesError, setPagesError] = useState<string | null>(null)
+  
+  // State cho posts
   const [posts, setPosts] = useState<NormalizedPost[]>([])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pageId, setPageId] = useState("")
-  const [graphApiVersion, setGraphApiVersion] = useState("")
+  
+  // State cho filters
   const [filterMode, setFilterMode] = useState<FilterMode>("range")
   const [filterYear, setFilterYear] = useState<string>(() => String(new Date().getFullYear()))
   const [dateRange, setDateRange] = useState<DateRange>(() => {
@@ -57,28 +68,73 @@ export function ManagePostsContent() {
     [posts],
   )
 
+  // Fetch pages khi component mount
   useEffect(() => {
-    fetchPosts()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadPages()
   }, [])
 
+  async function loadPages() {
+    setLoadingPages(true)
+    setPagesError(null)
+    try {
+      const config = getEnvConfig()
+      const fetchedPages = await fetchPages(config.facebookUserToken)
+      setPages(fetchedPages)
+      
+      // Tự động chọn page đầu tiên nếu có
+      if (fetchedPages.length > 0 && !selectedPage) {
+        setSelectedPage(fetchedPages[0])
+      }
+    } catch (err: any) {
+      setPagesError(err?.message || "Không thể tải danh sách pages")
+      console.error("Error loading pages:", err)
+    } finally {
+      setLoadingPages(false)
+    }
+  }
+
+  // Fetch posts khi selectedPage thay đổi
+  useEffect(() => {
+    if (selectedPage) {
+      fetchPosts()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPage])
+
   async function fetchPosts() {
+    if (!selectedPage) {
+      setError("Vui lòng chọn một Facebook Page")
+      return
+    }
+
     setLoading(true)
     setError(null)
     try {
-      const params = new URLSearchParams()
-      const resolvedRange = resolveRange(filterMode, dateRange, filterYear)
-      if (resolvedRange.since) params.set("since", resolvedRange.since)
-      if (resolvedRange.until) params.set("until", resolvedRange.until)
-      if (pageId) params.set("pageId", pageId)
-      if (graphApiVersion) params.set("graphApiVersion", graphApiVersion)
+      const config = getEnvConfig()
+      let response: PostsApiResponse
 
-      const response = await fetch(`/api/facebook/posts?${params.toString()}`)
-      if (!response.ok) {
-        throw new Error(`API trả về lỗi ${response.status}`)
+      if (filterMode === "year") {
+        // Fetch theo năm
+        const year = Number.parseInt(filterYear, 10)
+        response = await fetchPostsByYear({
+          pageId: selectedPage.id,
+          pageToken: selectedPage.token,
+          year: Number.isFinite(year) && year > 0 ? year : new Date().getFullYear(),
+          graphApiVersion: config.graphApiVersion,
+        })
+      } else {
+        // Fetch theo date range
+        const resolvedRange = resolveRange(filterMode, dateRange, filterYear)
+        response = await fetchPostsByDateRange({
+          pageId: selectedPage.id,
+          pageToken: selectedPage.token,
+          since: resolvedRange.since,
+          until: resolvedRange.until,
+          graphApiVersion: config.graphApiVersion,
+        })
       }
-      const payload = await response.json()
-      const normalized = normalizePosts(payload)
+
+      const normalized = normalizePosts(response)
       setPosts(normalized)
       setPage(1)
     } catch (err: any) {
@@ -211,6 +267,51 @@ export function ManagePostsContent() {
         </div>
       </div>
 
+      {/* Error hiển thị khi không load được pages */}
+      {pagesError && (
+        <Card className="border-rose-200 bg-rose-50 p-4">
+          <div className="flex items-center gap-2 text-sm text-rose-700">
+            <AlertCircle className="h-4 w-4" />
+            <div>
+              <p className="font-medium">Lỗi khi tải danh sách pages</p>
+              <p className="mt-1">{pagesError}</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={loadPages} 
+                className="mt-2"
+                disabled={loadingPages}
+              >
+                {loadingPages ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
+                Thử lại
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Card chọn Facebook Page */}
+      <Card className="p-4">
+        <div className="flex flex-col gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Chọn Facebook Page</label>
+            <PageSelect
+              pages={pages}
+              selectedPage={selectedPage}
+              onSelectPage={setSelectedPage}
+              disabled={loadingPages}
+              placeholder={loadingPages ? "Đang tải pages..." : "Chọn Facebook Page..."}
+            />
+            {selectedPage && (
+              <p className="text-xs text-muted-foreground">
+                Đang xem posts của: <span className="font-medium">{selectedPage.name}</span> (ID: {selectedPage.id})
+              </p>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Card filters và fetch posts */}
       <Card className="p-4">
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -272,10 +373,18 @@ export function ManagePostsContent() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={fetchPosts} disabled={loading}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={fetchPosts} 
+              disabled={loading || !selectedPage}
+            >
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCcw className="mr-2 h-4 w-4" />}
               Làm mới dữ liệu
             </Button>
+            {!selectedPage && (
+              <span className="text-xs text-amber-600">⚠️ Vui lòng chọn page trước</span>
+            )}
             <Badge variant="outline" className="rounded-full">
               Tổng bài: {posts.length}
             </Badge>
